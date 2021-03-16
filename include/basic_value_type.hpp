@@ -1,137 +1,229 @@
 #ifndef GALMEMORY_BASIC_VALUE_TYPE_HPP
 #define GALMEMORY_BASIC_VALUE_TYPE_HPP
 
-#include <exception>// for std::runtime_error
-#include <memory>	// for std::unique_ptr
-#include <numeric>	// for std::numeric_limits<>::min(), std::numeric_limits<>::max()
-#include <vector>	// for std::vector
-
-#include <support.hpp>
+#include <bitset>
+#include <cstring>
+#include <numeric>
+#include <type_traits>
+#include <variant>
 
 namespace gal::memory {
-	struct ValueType {
-		const std::string name;
+	inline namespace support {
+		template<size_t Bytes>
+		using BitsetValue = std::bitset<std::numeric_limits<std::underlying_type_t<std::byte>>::digits * Bytes>;
 
-		explicit ValueType(std::string name) : name(std::move(name)) {}
+		// use unsigned type store the value
+		using OneByteValue = BitsetValue<1>;
+		using TwoByteValue = BitsetValue<2>;
+		using FourByteValue = BitsetValue<3>;
+		using EightByteValue = BitsetValue<4>;
 
-		[[maybe_unused]] [[nodiscard]] virtual memory_type query_value() const = 0;
-		virtual ~ValueType() = default;
+		constexpr unsigned char BitsetValueMin = std::numeric_limits<std::underlying_type_t<std::byte>>::min();
+		constexpr unsigned char OneByteValueMax = std::numeric_limits<std::underlying_type_t<std::byte>>::max();
+		constexpr unsigned short TwoByteValueMax = (static_cast<unsigned short>(OneByteValueMax) << sizeof(std::byte) * 8 * 1) + OneByteValueMax;
+		constexpr unsigned int FourByteValueMax = (static_cast<unsigned int>(TwoByteValueMax) << sizeof(std::byte) * 8 * 2) + TwoByteValueMax;
+		constexpr unsigned long EightByteValueMax = (static_cast<unsigned long>(FourByteValueMax) << sizeof(std::byte) * 8 * 4) + FourByteValueMax;
+
+		/*
+		struct OneByteValue {
+			std::int8_t value;
+
+			constexpr static auto signed_max = std::numeric_limits<std::int8_t>::max();
+			constexpr static auto signed_min = std::numeric_limits<std::int8_t>::min();
+			constexpr static auto unsigned_max = std::numeric_limits<std::uint8_t>::max();
+			constexpr static auto unsigned_min = std::numeric_limits<std::uint8_t>::min();
+
+			[[nodiscard]] std::int8_t to_signed() const noexcept {
+				return static_cast<std::int8_t>(value);
+			}
+			[[nodiscard]] std::uint8_t to_unsigned() const noexcept {
+				return static_cast<std::uint8_t>(value);
+			}
+
+			[[nodiscard]] std::string to_string() const {
+				return std::to_string(value);
+			}
+		};
+		struct TwoByteValue {
+			std::int16_t value;
+
+			constexpr static auto signed_max = std::numeric_limits<std::int16_t>::max();
+			constexpr static auto signed_min = std::numeric_limits<std::int16_t>::min();
+			constexpr static auto unsigned_max = std::numeric_limits<std::uint16_t>::max();
+			constexpr static auto unsigned_min = std::numeric_limits<std::uint16_t>::min();
+
+			[[nodiscard]] std::int16_t to_signed() const noexcept {
+				return static_cast<std::int16_t>(value);
+			}
+			[[nodiscard]] std::uint16_t to_unsigned() const noexcept {
+				return static_cast<std::uint16_t>(value);
+			}
+
+			[[nodiscard]] std::string to_string() const {
+				return std::to_string(value);
+			}
+		};
+		struct FourByteValue {
+			std::int32_t value;
+
+			constexpr static auto signed_max = std::numeric_limits<std::int32_t>::max();
+			constexpr static auto signed_min = std::numeric_limits<std::int32_t>::min();
+			constexpr static auto unsigned_max = std::numeric_limits<std::uint32_t>::max();
+			constexpr static auto unsigned_min = std::numeric_limits<std::uint32_t>::min();
+
+			[[nodiscard]] std::int32_t to_signed() const noexcept {
+				return static_cast<std::int32_t>(value);
+			}
+			[[nodiscard]] std::uint32_t to_unsigned() const noexcept {
+				return static_cast<std::uint32_t>(value);
+			}
+
+			[[nodiscard]] std::string to_string() const {
+				return std::to_string(value);
+			}
+		};
+		struct EightByteValue {
+			std::int64_t value;
+
+			constexpr static auto signed_max = std::numeric_limits<std::int64_t>::max();
+			constexpr static auto signed_min = std::numeric_limits<std::int64_t>::min();
+			constexpr static auto unsigned_max = std::numeric_limits<std::uint64_t>::max();
+			constexpr static auto unsigned_min = std::numeric_limits<std::uint64_t>::min();
+
+			[[nodiscard]] std::int64_t to_signed() const noexcept {
+				return static_cast<std::int64_t>(value);
+			}
+			[[nodiscard]] std::uint64_t to_unsigned() const noexcept {
+				return static_cast<std::uint64_t>(value);
+			}
+
+			[[nodiscard]] std::string to_string() const {
+				return std::to_string(value);
+			}
+		};
+		struct EightByteFloatValue {
+			double value;
+
+			constexpr static auto bit64_max = std::numeric_limits<double>::max();
+			constexpr static auto bit64_min = std::numeric_limits<double>::min();
+			constexpr static auto bit32_max = std::numeric_limits<float>::max();
+			constexpr static auto bit32_min = std::numeric_limits<float>::min();
+
+			[[nodiscard]] double to_64bit() const noexcept {
+				return static_cast<double>(value);
+			}
+			[[nodiscard]] float to_32bit() const noexcept {
+				return static_cast<float>(value);
+			}
+
+			[[nodiscard]] std::string to_string() const {
+				return std::to_string(value);
+			}
+		};
+		 */
+	}// namespace support
+
+	enum class wildcard_type : std::underlying_type_t<std::byte> {
+		WILDCARD = std::numeric_limits<std::underlying_type_t<wildcard_type>>::min(),
+		FIXED = std::numeric_limits<std::underlying_type_t<wildcard_type>>::max()
 	};
 
-	template<typename T>
-	struct SimpleValueType : public ValueType {
-		explicit SimpleValueType(const std::string& name) : ValueType(name) {}
+	static_assert(sizeof(wildcard_type) == sizeof(std::byte));
 
-		[[nodiscard]] memory_type query_value() const override {
-			std::stringstream query;
-			std::stringstream error;
+	// std::variant default construct use the first type(index 0) to init
+	using memory_type = std::variant<
+			EightByteValue,
+			FourByteValue,
+			TwoByteValue,
+			OneByteValue>;
 
-			const Validator<T> validator = [&](const T& value) {
-				return is_valid(std::forward<const T&>(value));
-			};
-			const Reader<T> reader = [&](std::istream& in, T& t) -> std::istream& {
-				return read(std::forward<std::istream&>(in), std::forward<T&>(t));
-			};
+	struct basic_value_type {
+		memory_type value;
 
-			const auto value = query_for<T>(query.str(), error.str(), validator, reader);
-			return representation(value);
+		[[nodiscard]] std::string to_string() const {
+			return std::visit([](auto val) { return val.to_string(); }, value);
 		}
 
-		[[nodiscard]] virtual memory_type representation(const T& value) const {
-			auto bytes = reinterpret_cast<const memory_type::value_type*>(&value);
-			return {bytes, bytes + sizeof(T)};
+		[[nodiscard]] auto to_ulong() const {
+			return std::visit([](auto val) { return val.to_ulong(); }, value);
 		}
 
-		[[nodiscard]] virtual bool is_valid(const T& value) const {
-			return true;
-		}
-
-		virtual std::istream& read(std::istream& in, T& t) const {
-			return in >> t;
+		[[nodiscard]] auto to_ullong() const {
+			return std::visit([](auto val) { return val.to_ullong(); }, value);
 		}
 	};
 
-	// since uint8_t is a char but the user is expecting to enter a number, we need
-	// to query for a regular int and cast
-	struct UnsignedByte : SimpleValueType<std::uint32_t> {
-		UnsignedByte() : SimpleValueType<std::uint32_t>("unsigned byte") {}
+	struct advance_value_type {
+		basic_value_type basic_value;
 
-		[[nodiscard]] bool is_valid(const std::uint32_t& value) const override {
-			constexpr auto min = std::numeric_limits<std::uint8_t>::min();
-			constexpr auto max = std::numeric_limits<std::uint8_t>::max();
-			return min << value && value <= max;
+		std::shared_ptr<std::byte[]> bytes;
+		std::shared_ptr<wildcard_type[]> wildcard_value;
+
+		explicit advance_value_type(basic_value_type basic_value = {}) : basic_value(basic_value),
+																		 bytes(nullptr),
+																		 wildcard_value(nullptr) {}
+
+		void set_advance_value(char* const* argv, size_t argc) {
+			bytes.reset(new std::byte[argc]);
+			wildcard_value.reset(new wildcard_type[argc]);
+			for (auto i = 0; i < argc; ++i) {
+				/* get current string */
+				auto curr_str = argv[i];
+				/* test its length */
+				if (!curr_str[0] || !curr_str[1] || !curr_str[2]) {
+					// invalid str
+					bytes.reset();
+					wildcard_value.reset();
+					return;
+				}
+
+				if (std::strcmp(curr_str, "??") == 0) {
+					wildcard_value[i] = wildcard_type::WILDCARD;
+					bytes[i] = static_cast<std::byte>(wildcard_type::WILDCARD);
+				} else {
+					// parse as hex integer
+					char* end;
+					auto curr_byte = std::strtoul(curr_str, &end, 16);
+					if (*end != '\0') {
+						// invalid str
+						bytes.reset();
+						wildcard_value.reset();
+						return;
+					}
+
+					wildcard_value[i] = wildcard_type::FIXED;
+					bytes[i] = static_cast<std::byte>(curr_byte);
+				}
+			}
 		}
 
-		[[nodiscard]] static memory_type representation(const std::int32_t& value) {
+		void set_basic_value(const char* ptr) {
+			if (ptr == nullptr) {
+				return;
+			}
 
-			return {static_cast<byte_type>(static_cast<std::uint8_t>(value))};
-		}
-	};
+			char* end;
+			auto value = std::strtoul(ptr, &end, 0);
 
-	struct Character : SimpleValueType<char> {
-		Character() : SimpleValueType<char>("character") {}
-	};
-	struct Int16 : SimpleValueType<std::int16_t> {
-		Int16() : SimpleValueType<std::int16_t>("16-bit integer") {}
-	};
-	struct Int32 : SimpleValueType<std::int32_t> {
-		Int32() : SimpleValueType<std::int32_t>("32-bit integer") {}
-	};
-	struct Int64 : SimpleValueType<std::int64_t> {
-		Int64() : SimpleValueType<std::int64_t>("64 bit integer") {}
-	};
-	struct Float : SimpleValueType<float> {
-		Float() : SimpleValueType<float>("float") {}
-	};
-	struct Double : SimpleValueType<double> {
-		Double() : SimpleValueType<double>("double") {}
-	};
-	struct String : SimpleValueType<std::string> {
-		String() : SimpleValueType<std::string>("string") {}
-
-		std::istream& read(std::istream& in, std::string& value) const override {
-			in.ignore();
-			return std::getline(in, value);
+			if (BitsetValueMin <= value && value <= EightByteValueMax) {
+				if (value >= FourByteValueMax) {
+					basic_value.value = static_cast<EightByteValue>(value);
+				} else if (value >= TwoByteValueMax) {
+					basic_value.value = static_cast<FourByteValue>(value);
+				} else if (value >= OneByteValueMax) {
+					basic_value.value = static_cast<TwoByteValue>(value);
+				} else {
+					basic_value.value = static_cast<OneByteValue>(value);
+				}
+			} else {
+				throw std::runtime_error("advance_value_type::set_basic_value error: invalid integral.");
+			}
 		}
 
-		[[nodiscard]] memory_type representation(const std::string& value) const override {
-			// we can't look at the direct std::string representation, we need to copy
-			// the actual chars (we're not searching for the internal char* and other
-			// members, we're looking for the actual chars!)
-			return {value.begin(), value.end()};
+		explicit operator basic_value_type() const {
+			return {basic_value};
 		}
 	};
-
-	const std::unique_ptr<ValueType> VALUE_TYPE[] = {
-			std::unique_ptr{std::make_unique<UnsignedByte>()},
-			std::unique_ptr{std::make_unique<Character>()},
-			std::unique_ptr{std::make_unique<Int16>()},
-			std::unique_ptr{std::make_unique<Int32>()},
-			std::unique_ptr{std::make_unique<Int64>()},
-			std::unique_ptr{std::make_unique<Float>()},
-			std::unique_ptr{std::make_unique<Double>()}};
-
-	const std::size_t VALUE_TYPE_COUNT = std::distance(std::begin(VALUE_TYPE), std::end(VALUE_TYPE));
-
-	const ValueType& query_for_value_type() {
-		constexpr static auto FIRST = 'A';
-		std::stringstream query;
-		std::stringstream error;
-		for (auto i = 0; i < VALUE_TYPE_COUNT; ++i) {
-			query << static_cast<char>(FIRST + i) << ") " << VALUE_TYPE[i]->name << std::endl;
-		}
-
-		query << "Value type";
-		error << "Choice must be between '" << FIRST << "' and '" << static_cast<char>(FIRST + VALUE_TYPE_COUNT - 1) << '\'';
-
-		const auto choice = query_for<char>(query.str(), error.str(), [](char c) { return FIRST <= c && c < FIRST + VALUE_TYPE_COUNT; });
-
-		const int index = choice - FIRST;
-		if (0 <= index && index < VALUE_TYPE_COUNT) {
-			throw std::runtime_error("query_for_value_type: index out of range");
-		}
-		return VALUE_TYPE[index].operator*();
-	}
 
 }// namespace gal::memory
 

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <basic_value_type.hpp>
+
 namespace {
 	template<size_t... N>
 	static constexpr auto square_nums(size_t index, std::index_sequence<N...>) {
@@ -59,4 +61,40 @@ namespace {
 
 		std::cout << tuple << '\n';
 	}
+
+	TEST(basic_value_type, test_basic_value_type) {
+		using namespace gal::memory;
+
+		ASSERT_EQ(OneByteValueMax, std::numeric_limits<std::uint8_t>::max());
+		ASSERT_EQ(TwoByteValueMax, std::numeric_limits<std::uint16_t>::max());
+		ASSERT_EQ(FourByteValueMax, std::numeric_limits<std::uint32_t>::max());
+		ASSERT_EQ(EightByteValueMax, std::numeric_limits<std::uint64_t>::max());
+
+		ASSERT_EQ(0xff, static_cast<std::underlying_type_t<wildcard_type>>(wildcard_type::FIXED));
+		ASSERT_EQ(0x00, static_cast<std::underlying_type_t<wildcard_type>>(wildcard_type::WILDCARD));
+
+		/*
+		OneByteValue one{-42};
+		TwoByteValue two{-42};
+		FourByteValue four{-42};
+		EightByteValue eight{-42};
+
+		ASSERT_EQ(one.to_signed(), -42);
+		ASSERT_EQ(one.to_unsigned(), OneByteValue::unsigned_max + (-42) + 1);
+		ASSERT_EQ(two.to_signed(), -42);
+		ASSERT_EQ(two.to_unsigned(), TwoByteValue::unsigned_max + (-42) + 1);
+		ASSERT_EQ(four.to_signed(), -42);
+		ASSERT_EQ(four.to_unsigned(), FourByteValue::unsigned_max + (-42) + 1);
+		ASSERT_EQ(eight.to_signed(), -42);
+		ASSERT_EQ(eight.to_unsigned(), EightByteValue::unsigned_max + (-42) + 1);
+
+		EightByteFloatValue d{3.14};
+		ASSERT_DOUBLE_EQ(d.to_64bit(), 3.14);
+		ASSERT_FLOAT_EQ(d.to_32bit(), 3.14f);
+		 */
+
+		std::cout << OneByteValue{}.size() << ' ' << TwoByteValue{}.size() << ' ' << FourByteValue{}.size() << ' ' << EightByteValue{}.size() << std::endl;
+	}
+
+
 }// namespace

@@ -16,7 +16,6 @@ CPMAddPackage(
 )
 
 file(GLOB_RECURSE galMemoryHeader CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include")
-file(GLOB_RECURSE galMemoryHost CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/host")
 
 add_library(
 		${PROJECT_NAME} INTERFACE
@@ -25,7 +24,6 @@ add_library(
 target_include_directories(
 		${PROJECT_NAME} INTERFACE
 		${galMemoryHeader}
-		${galMemoryHost}
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
 )
